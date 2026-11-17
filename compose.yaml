@@ -1,0 +1,65 @@
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: queuepilot
+      POSTGRES_USER: queuepilot
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U queuepilot -d queuepilot"]
+      interval: 5s
+      timeout: 3s
+      retries: 15
+  migrate:
+    build: ./backend
+    environment: &backend_env
+      DATABASE_URL: postgresql+psycopg://queuepilot:${POSTGRES_PASSWORD}@db:5432/queuepilot
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@example.com}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Set ADMIN_PASSWORD in .env}
+      CORS_ORIGINS: '["http://localhost:8080"]'
+      PUBLIC_URL: http://localhost:8080
+      NOTIFICATION_MODE: ${NOTIFICATION_MODE:-console}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM: ${SMTP_FROM:-queuepilot@example.com}
+      NOTIFICATION_WEBHOOK_URL: ${NOTIFICATION_WEBHOOK_URL:-}
+      NOTIFICATION_WEBHOOK_TOKEN: ${NOTIFICATION_WEBHOOK_TOKEN:-}
+      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID:-}
+      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN:-}
+      TWILIO_SMS_FROM: ${TWILIO_SMS_FROM:-}
+      TWILIO_WHATSAPP_FROM: ${TWILIO_WHATSAPP_FROM:-}
+      TWILIO_WHATSAPP_CONTENT_SID: ${TWILIO_WHATSAPP_CONTENT_SID:-}
+    command: ["sh", "-c", "alembic upgrade head && python -m app.seed"]
+    depends_on:
+      db:
+        condition: service_healthy
+  api:
+    build: ./backend
+    environment: *backend_env
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+  worker:
+    build: ./backend
+    environment: *backend_env
+    command: ["python", "-m", "app.worker"]
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+  web:
+    build: ./frontend
+    ports: ["8080:80"]
+    depends_on:
+      api:
+        condition: service_healthy
+volumes:
+  postgres_data:

@@ -1,0 +1,25 @@
+# Copy to config.properties; never commit real credentials. Environment overrides this file.
+database_url=postgresql+psycopg://queuepilot:CHANGE_ME@localhost:5432/queuepilot
+cors_origins=["http://localhost:5173"]
+public_url=http://localhost:5173
+cookie_secure=false
+organization_id=main
+organization_name=QueuePilot Central
+timezone=Asia/Kolkata
+admin_email=admin@example.com
+admin_password=REPLACE_WITH_A_LONG_RANDOM_PASSWORD
+# console simulates; smtp sends email; providers uses SMTP + Twilio; webhook uses your HTTPS gateway.
+notification_mode=console
+smtp_host=
+smtp_port=587
+smtp_user=
+smtp_password=
+smtp_from=queuepilot@example.com
+notification_webhook_url=
+notification_webhook_token=
+twilio_account_sid=
+twilio_auth_token=
+twilio_sms_from=
+twilio_whatsapp_from=
+# Approved WhatsApp template: variables 1=token, 2=event name, 3=status.
+twilio_whatsapp_content_sid=
