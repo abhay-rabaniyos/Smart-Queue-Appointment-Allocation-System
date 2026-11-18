@@ -7,6 +7,7 @@ ENV PATH="/app/.venv/bin:$PATH" PYTHONUNBUFFERED=1
 COPY app ./app
 COPY migrations ./migrations
 COPY alembic.ini ./
+COPY demo.properties ./
 RUN useradd --uid 10001 --create-home queuepilot
 USER queuepilot
 EXPOSE 8000

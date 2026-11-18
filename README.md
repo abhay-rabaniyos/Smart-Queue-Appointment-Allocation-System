@@ -4,7 +4,7 @@ React + TypeScript and FastAPI queue and appointment application. Supports onlin
 
 ## Run locally on Windows
 
-Requirements: Python 3.12+, uv, and Node 20.19+ (Node 22 recommended). The downloaded project-local Python under `.tools/python/` can also be used. No credentials are hardcoded in application code.
+Requirements: Python 3.12+, uv, and Node 20.19+ (Node 22 recommended). The downloaded project-local Python under `.tools/python/` can also be used. Private credentials are read from local configuration; opt-in public demo credentials are provided separately.
 
 ```powershell
 ./scripts/init-local.ps1
@@ -39,6 +39,24 @@ uv sync --project backend --python .tools/python/cpython-3.12.16-windows-x86_64-
 ```
 
 Once the environment exists, run `backend/.venv/Scripts/python.exe` directly from the appropriate working directory, or use `uv run --no-sync` inside `backend`.
+
+## Demo logins for GitHub clones
+
+To create all three demo roles, run from `backend/` after installing dependencies and applying migrations:
+
+```powershell
+uv run python -m app.seed --demo
+```
+
+| Role | Email | Password (plain text for signing in) |
+| --- | --- | --- |
+| Administrator | `admin.demo@example.com` | `QueuePilotDemo!2026` |
+| Receptionist | `reception.demo@example.com` | `QueuePilotDemo!2026` |
+| Service staff | `staff.demo@example.com` | `QueuePilotDemo!2026` |
+
+Sign in through **Service desk**. The accounts are created only by `--demo`, not automatically when cloning or starting the app. The command also creates a staffed demo counter. It can be run again without duplicating accounts or resetting passwords. Conflicting existing accounts cause a rollback instead of overwriting them.
+
+These intentionally public credentials are in `backend/demo.properties`; use them only for local demos. Database passwords remain hashed. Your private generated administrator credentials remain excluded from GitHub. For production, use the normal bootstrap and unique passwords. Customers use private queue passes and do not need login accounts.
 
 ## PostgreSQL with Docker
 
