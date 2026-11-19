@@ -8,6 +8,7 @@ def test_shared_service_counts_and_distinct_current_tokens(env):
     with factory.begin() as db:
         db.add(Counter(id="second", org_id="main", name="Counter 02", service_id="svc", staff_id="admin"))
     first = register(client).json()
+    assert first["service_name"] == "Consultation"
     second = register(client).json()
     summaries = client.get("/api/board").json()["counters"]
     assert all(c["waiting_count"] == 2 and c["availability"] == "available" for c in summaries)

@@ -6,6 +6,10 @@ Update, 18 November 2026: opt-in demo accounts added; all 52 backend tests passe
 
 Update, 19 November 2026: counter-specific customer and staff views added. Backend: 55 tests passed, 94% coverage. Frontend: 14 tests passed and production build passed. Checks cover shared queue counts, distinct serving tokens, availability reasons, public privacy, role-specific controls, counter filters, and customer assignment messaging. New screens have component-test validation; no new manual browser pass is claimed.
 
+Service-label follow-up, 19 November 2026: 56 backend tests passed with 94% coverage; 15 frontend tests, production build, and backend lint passed. Added explicit visitor service labels and combined service/counter filtering; verified service names remain available for inactive services.
+
+Error-reporting follow-up, 19 November 2026: 59 backend tests passed with 94% coverage; 20 frontend tests, production build, and backend lint passed. Tests cover error deduplication, dismissal until recovery, empty-queue feedback, invalid email explanations, safe SMTP recipient failures, private-ticket isolation, provider recovery, and dead-letter wording. Provider failures are mocked; no live message delivery or new manual browser QA is claimed.
+
 - Backend: 49 tests passed with 94% statement coverage, including workflow, concurrency, SMTP/Twilio/webhook adapters, configuration, and frozen migration upgrade/downgrade checks.
 - Frontend: 8 tests passed; TypeScript validation and Vite production build passed, including stable idempotency keys after network failures.
 - Dependency audit: zero frontend vulnerabilities after updating Vitest to 4.1.12.

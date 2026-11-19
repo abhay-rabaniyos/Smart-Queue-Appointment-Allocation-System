@@ -67,6 +67,23 @@
   font-synthesis: none;
   font-weight: 400;
 }
+.error-notifications {
+  position: fixed;
+  top: 88px;
+  right: 20px;
+  z-index: 1000;
+  max-width: min(480px, calc(100vw - 32px));
+  max-height: calc(100vh - 120px);
+  overflow-y: auto;
+}
+.error-notifications .alert {
+  box-shadow: 0 5px 24px #243b2526;
+  border: 1px solid #e7bbaa;
+  align-items: flex-start;
+}
+.error-notifications .alert button {
+  flex-shrink: 0;
+}
 * {
   box-sizing: border-box;
 }

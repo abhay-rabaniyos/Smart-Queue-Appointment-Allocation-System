@@ -366,7 +366,12 @@ export default function AdminTools({
                   <td>{status(e.kind)}</td>
                   <td>
                     {e.state}
-                    {e.error && ` · ${e.error}`}
+                    {e.error && (
+                      <small role="note">
+                        {e.error_message ??
+                          "Notification delivery failed. Check the provider configuration."}
+                      </small>
+                    )}
                   </td>
                   <td>{e.attempts}</td>
                   <td>

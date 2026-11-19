@@ -36,6 +36,7 @@ from .schemas import (
 )
 from .security import create_session, current_user, digest, password_hash, roles, utc, verify_password
 from .services import QueueService, fail
+from .notification_errors import error_message
 
 app = FastAPI(title="QueuePilot API", version="1.0.0")
 app.add_middleware(
@@ -175,7 +176,25 @@ def reception_register(data: Registration, key: Key, db: Db, user: Reception):
 @app.get("/api/tickets/{secret}")
 def ticket(secret: str, db: Db):
     service = QueueService(db, settings.organization_id)
-    return service.private_ticket(service.by_secret(secret))
+    obj = service.by_secret(secret)
+    result = service.private_ticket(obj)
+    failed = db.scalar(
+        select(Outbox)
+        .where(
+            Outbox.org_id == obj.org_id,
+            Outbox.payload["ticket_id"].as_string() == obj.id,
+            Outbox.error.is_not(None),
+            Outbox.state.in_(("pending", "dead")),
+        )
+        .order_by(Outbox.created.desc())
+        .limit(1)
+    )
+    result["notification_error"] = (
+        {"code": failed.error, "message": error_message(failed.error, failed.state), "state": failed.state}
+        if failed
+        else None
+    )
+    return result
 
 
 @app.get("/api/tickets/{secret}/qr")
@@ -289,7 +308,14 @@ def operations(db: Db, user: Annotated[User, Depends(current_user)]):
             "sample_limit": 500,
         },
         "outbox": [
-            {"id": e.id, "kind": e.kind, "state": e.state, "attempts": e.attempts, "error": e.error}
+            {
+                "id": e.id,
+                "kind": e.kind,
+                "state": e.state,
+                "attempts": e.attempts,
+                "error": e.error,
+                "error_message": error_message(e.error, e.state),
+            }
             for e in db.scalars(
                 select(Outbox).where(Outbox.org_id == user.org_id).order_by(Outbox.created.desc()).limit(50)
             )

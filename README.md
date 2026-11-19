@@ -126,7 +126,13 @@ HTTP schemas validate inputs; route dependencies enforce roles; the application 
 
 ## Tests
 
+### UI errors
+
+API validation/action failures, network/timeouts, background refresh failures and live-update failures use a shared dismissible error panel, visible even when the page is scrolled. Repeated identical failures show one alert per continuing incident; dismissing it suppresses repeats until recovery, after which a new failure may be shown. Ordinary anonymous `/auth/me` responses do not trigger sign-in errors. SMTP/provider failures surface as safe explanatory messages in staff views and on the affected customer's private ticket (updated by polling). Public boards do not expose delivery errors or recipient details. Invalid email syntax is rejected before registration; SMTP can still reject a correctly formatted address. Dead-letter errors explain that automatic retries have stopped. Native required-field validation and the React error boundary remain in place for form and rendering errors.
+
 ### Counter views
+
+The appointments/visitors table shows each ticket's service and supports service and counter filters together. Ticket and board APIs include service names so existing visits remain understandable when a service is inactive or absent from the public booking list. Queue passes explicitly label the requested service and include it in the call-to-counter message.
 
 Customers see a counter directory, service-specific counter availability during registration, eligible counter routing on the live board, and their assigned counter on the queue pass after being called. Availability distinguishes ready, serving, paused, no active staff, and unavailable services. Staff names and roles are shown only in authenticated counter workspaces. All staff roles can view counter context; service staff can operate only their own counter, administrators can operate all counters, and receptionists have a read-only counter view. The visitor table can be filtered by counter, including unassigned visitors in that counter's shared service queue. Waiting counts are per service and must not be added together across counters handling the same service.
 

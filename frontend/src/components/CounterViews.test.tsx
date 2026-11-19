@@ -233,6 +233,37 @@ describe("counter context", () => {
       expect(within(table).getByText("W-0002")).toBeInTheDocument();
       expect(within(table).queryByText("A-0001")).not.toBeInTheDocument();
       expect(within(table).queryByText("B-0003")).not.toBeInTheDocument();
+      expect(within(table).getByText("Consultation")).toBeInTheDocument();
+      await userEvent.selectOptions(
+        screen.getByLabelText("Filter visitors by service"),
+        "svc",
+      );
+      await userEvent.selectOptions(
+        screen.getByLabelText("Filter visitors by counter"),
+        "c3",
+      );
+      expect(
+        screen.getByText("No visitors match the selected service and counter."),
+      ).toBeInTheDocument();
     },
   );
+  it("keeps the requested service visible when the service is no longer bookable", () => {
+    render(
+      <TicketCard
+        ticket={{
+          ...ticket,
+          status: "completed",
+          service_name: "Archived consultation",
+        }}
+        services={[]}
+        counters={[]}
+        busy={false}
+        act={vi.fn()}
+        save={vi.fn()}
+      />,
+    );
+    expect(
+      screen.getByRole("heading", { name: "Archived consultation" }),
+    ).toBeInTheDocument();
+  });
 });

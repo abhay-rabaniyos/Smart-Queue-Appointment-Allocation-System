@@ -50,6 +50,11 @@ export default function TicketCard({
       },
       action === "check-in" ? "You’re checked in" : "Visit updated",
     );
+  const serviceName =
+    ticket.service_name ||
+    services.find((s) => s.id === ticket.service_id)?.name ||
+    counters.find((c) => c.service_id === ticket.service_id)?.service_name ||
+    "Service unavailable";
   return (
     <section className="queue-pass">
       <div className="section-title">
@@ -61,7 +66,8 @@ export default function TicketCard({
         </span>
       </div>
       <strong className="big-token">{ticket.token}</strong>
-      <h3>{services.find((s) => s.id === ticket.service_id)?.name}</h3>
+      <small className="qr-note">SERVICE</small>
+      <h3>{serviceName}</h3>
       <p>{ticket.name}</p>
       {ticket.slot && <p>{new Date(ticket.slot).toLocaleString()}</p>}
       <div className="ticket-counter-info">
@@ -85,7 +91,9 @@ export default function TicketCard({
                 .filter((c) => c.service_id === ticket.service_id)
                 .map((c) => (
                   <li key={c.id}>
-                    <span>{c.name}</span>
+                    <span>
+                      {c.name} · {c.service_name}
+                    </span>
                     <small>{counterStatus[c.availability]}</small>
                   </li>
                 ))}
@@ -121,8 +129,8 @@ export default function TicketCard({
         <div className="callout">
           Please proceed to{" "}
           {counters.find((c) => c.id === ticket.counter_id)?.name ??
-            "your assigned counter"}
-          .
+            "your assigned counter"}{" "}
+          for {serviceName}.
         </div>
       )}
       <img

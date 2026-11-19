@@ -35,7 +35,14 @@ export default function QueueBoard({
                     <td>
                       <strong>{t.token}</strong>
                     </td>
-                    <td>{services.find((s) => s.id === t.service_id)?.name}</td>
+                    <td>
+                      {t.service_name ||
+                        services.find((s) => s.id === t.service_id)?.name ||
+                        board.counters.find(
+                          (c) => c.service_id === t.service_id,
+                        )?.service_name ||
+                        "Service unavailable"}
+                    </td>
                     <td>
                       {board.counters
                         .filter(

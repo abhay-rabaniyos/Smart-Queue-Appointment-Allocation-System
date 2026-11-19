@@ -302,6 +302,7 @@ class QueueService:
             "token": ticket.token,
             "name": ticket.name,
             "service_id": ticket.service_id,
+            "service_name": self.service_name(ticket.service_id),
             "status": ticket.status,
             "slot": utc(ticket.slot).isoformat() if ticket.slot else None,
             "counter_id": ticket.counter_id,
@@ -328,6 +329,7 @@ class QueueService:
                     "token": t.token,
                     "status": t.status,
                     "service_id": t.service_id,
+                    "service_name": self.service_name(t.service_id),
                     "counter_id": t.counter_id,
                     **estimates.get(t.id, {"position": None, "eta_minutes": None}),
                 }
@@ -335,6 +337,13 @@ class QueueService:
             ],
             "counters": counters,
         }
+
+    def service_name(self, service_id):
+        if not hasattr(self, "_service_names"):
+            self._service_names = dict(
+                self.db.execute(select(Service.id, Service.name).where(Service.org_id == self.org_id)).all()
+            )
+        return self._service_names.get(service_id, "Service unavailable")
 
     def counter_summaries(self, tickets=None):
         """Public-safe counter state. Waiting counts belong to a shared service queue."""

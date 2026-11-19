@@ -23,6 +23,7 @@ export type Operations = {
     state: string;
     attempts: number;
     error: string | null;
+    error_message?: string | null;
   }[];
   audit: { id: string; action: string; actor: string; created: string }[];
 };

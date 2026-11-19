@@ -9,7 +9,7 @@ it("reuses an uncertain command key after a network failure", async () => {
   vi.stubGlobal("fetch", mock);
   await expect(
     api("/tickets", "POST", { name: "Uncertain visitor" }),
-  ).rejects.toThrow("Network failure");
+  ).rejects.toThrow("Cannot connect to QueuePilot");
   await api("/tickets", "POST", { name: "Uncertain visitor" });
   expect(mock.mock.calls[0][1].headers["Idempotency-Key"]).toBe(
     mock.mock.calls[1][1].headers["Idempotency-Key"],

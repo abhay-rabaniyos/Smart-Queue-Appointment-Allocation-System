@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
 import {
   Activity,
   ArrowRight,
@@ -12,9 +12,10 @@ import {
   Ticket as TicketIcon,
   Waypoints,
 } from "lucide-react";
-import { api, type Service, type Ticket, type User } from "./api";
+import { api, ApiError, type Service, type Ticket, type User } from "./api";
 import type { Operations } from "./types";
 import { status } from "./utils";
+import useErrors from "./hooks/useErrors";
 import useBoard from "./hooks/useBoard";
 import CounterOverview from "./components/CounterOverview";
 import Stat from "./components/Stat";
@@ -24,29 +25,56 @@ import QueueBoard from "./components/QueueBoard";
 import AdminTools from "./components/AdminTools";
 export default function App() {
   const [counterFilter, setCounterFilter] = useState("all");
+  const [serviceFilter, setServiceFilter] = useState("all");
   const [view, setView] = useState("visit"),
     [services, setServices] = useState<Service[]>([]),
     [user, setUser] = useState<User | null>(null),
-    [error, setError] = useState(""),
     [notice, setNotice] = useState(""),
     [busy, setBusy] = useState(false),
     [ticket, setTicket] = useState<Ticket | null>(null),
     [ops, setOps] = useState<Operations | null>(null);
-  const { board, live } = useBoard();
+  const { messages, report, resolve, dismiss } = useErrors();
+  const setError = (message: string) => {
+    if (message) report("action", message);
+  };
+  const { board, live } = useBoard(report, resolve);
+  const previousNotificationKeys = useRef(new Set<string>());
+  useEffect(() => {
+    const current = new Map<string, string>();
+    if (user)
+      for (const event of ops?.outbox ?? []) {
+        if (event.error)
+          current.set(
+            "delivery:" + event.error,
+            event.error_message ??
+              "Notification delivery failed. Check the provider configuration.",
+          );
+      }
+    if (ticket?.notification_error)
+      current.set(
+        "ticket-delivery:" + ticket.secret,
+        ticket.notification_error.message,
+      );
+    for (const key of previousNotificationKeys.current)
+      if (!current.has(key)) resolve(key);
+    for (const [key, message] of current) report(key, message);
+    previousNotificationKeys.current = new Set(current.keys());
+  }, [ops, ticket, user, report, resolve]);
   const refresh = useCallback(async () => {
     if (user) setOps(await api<Operations>("/operations"));
   }, [user]);
   const act = async (fn: () => Promise<unknown>, message = "Saved") => {
     if (busy) return;
     setBusy(true);
-    setError("");
     setNotice("");
     try {
       await fn();
+      resolve("action");
       setNotice(message);
       await refresh();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Something went wrong");
+      if (!(e instanceof ApiError))
+        setError(e instanceof Error ? e.message : "Something went wrong");
     } finally {
       setBusy(false);
     }
@@ -54,7 +82,7 @@ export default function App() {
   useEffect(() => {
     api<Service[]>("/services")
       .then(setServices)
-      .catch(() => setError("Backend unavailable. Start the API and refresh."));
+      .catch(() => {});
     api<User>("/auth/me")
       .then(setUser)
       .catch(() => {});
@@ -85,19 +113,25 @@ export default function App() {
     return () => clearInterval(timer);
   }, [ticket?.secret]);
   const saveTicket = (value: Ticket) => {
-    setTicket(value);
+    setTicket((previous) =>
+      previous?.secret === value.secret &&
+      value.notification_error === undefined
+        ? { ...value, notification_error: previous.notification_error }
+        : value,
+    );
     sessionStorage.setItem("qp-ticket", value.secret);
     history.replaceState(null, "", `#ticket=${value.secret}`);
   };
   const visibleTickets = ops
     ? ops.tickets.filter(
         (t) =>
-          counterFilter === "all" ||
-          t.counter_id === counterFilter ||
-          (!t.counter_id &&
-            ["booked", "waiting"].includes(t.status) &&
-            ops.counters.find((c) => c.id === counterFilter)?.service_id ===
-              t.service_id),
+          (serviceFilter === "all" || t.service_id === serviceFilter) &&
+          (counterFilter === "all" ||
+            t.counter_id === counterFilter ||
+            (!t.counter_id &&
+              ["booked", "waiting"].includes(t.status) &&
+              ops.counters.find((c) => c.id === counterFilter)?.service_id ===
+                t.service_id)),
       )
     : [];
   const total =
@@ -195,14 +229,19 @@ export default function App() {
               })}
             </span>
           </div>
-          {error && (
-            <div role="alert" className="alert error">
-              {error}
-              <button aria-label="Dismiss error" onClick={() => setError("")}>
-                ×
-              </button>
-            </div>
-          )}
+          <section className="error-notifications" aria-label="Errors">
+            {messages.map((message) => (
+              <div key={message} role="alert" className="alert error">
+                <span>{message}</span>
+                <button
+                  aria-label="Dismiss error"
+                  onClick={() => dismiss(message)}
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+          </section>
           {notice && (
             <div role="status" className="alert success">
               <Check size={18} />
@@ -388,7 +427,9 @@ export default function App() {
                           setOps(null);
                           setNotice("Signed out");
                         })
-                        .catch((e) => setError(e.message))
+                        .catch((e) => {
+                          if (!(e instanceof ApiError)) setError(e.message);
+                        })
                         .finally(() => setBusy(false));
                     }}
                   >
@@ -516,6 +557,21 @@ export default function App() {
                     <section className="panel">
                       <h2>Appointments & visitors</h2>
                       <label>
+                        Filter visitors by service
+                        <select
+                          value={serviceFilter}
+                          onChange={(e) => setServiceFilter(e.target.value)}
+                        >
+                          <option value="all">All services</option>
+                          {ops.services.map((s) => (
+                            <option key={s.id} value={s.id}>
+                              {s.name}
+                              {s.active ? "" : " (inactive)"}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <label>
                         Filter visitors by counter
                         <select
                           value={counterFilter}
@@ -524,7 +580,12 @@ export default function App() {
                           <option value="all">All counters</option>
                           {ops.counters.map((c) => (
                             <option key={c.id} value={c.id}>
-                              {c.name}
+                              {c.name} ·{" "}
+                              {ops.services.find((s) => s.id === c.service_id)
+                                ?.name ??
+                                ops.counter_summaries.find((s) => s.id === c.id)
+                                  ?.service_name ??
+                                "Service unavailable"}
                             </option>
                           ))}
                         </select>
@@ -539,6 +600,7 @@ export default function App() {
                           <thead>
                             <tr>
                               <th>Token / Visitor</th>
+                              <th>Service</th>
                               <th>Appointment</th>
                               <th>Counter / routing</th>
                               <th>Status</th>
@@ -552,6 +614,16 @@ export default function App() {
                                 <td>
                                   <strong>{t.token}</strong>
                                   <small>{t.name}</small>
+                                </td>
+                                <td>
+                                  {t.service_name ||
+                                    ops.services.find(
+                                      (s) => s.id === t.service_id,
+                                    )?.name ||
+                                    ops.counter_summaries.find(
+                                      (c) => c.service_id === t.service_id,
+                                    )?.service_name ||
+                                    "Service unavailable"}
                                 </td>
                                 <td>
                                   {t.slot
@@ -615,7 +687,7 @@ export default function App() {
                         {!visibleTickets.length && (
                           <p className="empty">
                             {ops.tickets.length
-                              ? "No visitors match this counter."
+                              ? "No visitors match the selected service and counter."
                               : "No visitors registered yet."}
                           </p>
                         )}
