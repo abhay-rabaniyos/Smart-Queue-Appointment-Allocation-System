@@ -1,7 +1,8 @@
-import type { Ticket, Counter, Service, User } from "./api";
+import type { Ticket, Counter, CounterSummary, Service, User } from "./api";
 export type Operations = {
   tickets: Ticket[];
   counters: Counter[];
+  counter_summaries: CounterSummary[];
   services: Service[];
   staff: (User & { email: string; active: boolean })[];
   rules: {

@@ -40,6 +40,14 @@ uv sync --project backend --python .tools/python/cpython-3.12.16-windows-x86_64-
 
 Once the environment exists, run `backend/.venv/Scripts/python.exe` directly from the appropriate working directory, or use `uv run --no-sync` inside `backend`.
 
+## Sharing a local demo through ngrok
+
+Keep FastAPI running on `127.0.0.1:8000` and Vite on port `5173`. Run `ngrok http http://127.0.0.1:5173` in another terminal. Only Vite's port needs a tunnel: `/api` HTTP requests and WebSocket updates are proxied to FastAPI internally.
+
+Add your exact ngrok hostname to `server.allowedHosts` in `frontend/vite.config.ts`. The current configured hostname is `battery-pencil-paltry.ngrok-free.dev`. In your ignored `backend/config.properties`, include `https://battery-pencil-paltry.ngrok-free.dev` in `cors_origins` and set `public_url` to that HTTPS URL so QR passes open through the tunnel. Restart FastAPI and Vite after changes. Update these three settings if your ngrok hostname changes. Keep the worker running if testing notifications or no-show handling.
+
+This exposes the local demo, including any enabled public demo logins, to anyone with the tunnel address. Use test data. The Vite development server is intended for temporary demonstrations; use the production deployment for ongoing hosting.
+
 ## Demo logins for GitHub clones
 
 To create all three demo roles, run from `backend/` after installing dependencies and applying migrations:
@@ -117,6 +125,10 @@ HTTP schemas validate inputs; route dependencies enforce roles; the application 
 - **Analytics:** dashboard statistics describe the latest 500 registrations, and audit/notification views show the latest 50 events. They are explicitly bounded, not all-time reporting.
 
 ## Tests
+
+### Counter views
+
+Customers see a counter directory, service-specific counter availability during registration, eligible counter routing on the live board, and their assigned counter on the queue pass after being called. Availability distinguishes ready, serving, paused, no active staff, and unavailable services. Staff names and roles are shown only in authenticated counter workspaces. All staff roles can view counter context; service staff can operate only their own counter, administrators can operate all counters, and receptionists have a read-only counter view. The visitor table can be filtered by counter, including unassigned visitors in that counter's shared service queue. Waiting counts are per service and must not be added together across counters handling the same service.
 
 ```powershell
 cd backend

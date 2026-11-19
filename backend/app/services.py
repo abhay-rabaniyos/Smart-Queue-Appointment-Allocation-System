@@ -317,10 +317,7 @@ class QueueService:
         tickets = self.db.scalars(
             select(Ticket).where(Ticket.org_id == self.org_id, Ticket.status.in_(("waiting", "serving")))
         ).all()
-        counters = self.db.scalars(select(Counter).where(Counter.org_id == self.org_id)).all()
-        available_staff = set(
-            self.db.scalars(select(User.id).where(User.org_id == self.org_id, User.active.is_(True)))
-        )
+        counters = self.counter_summaries(tickets)
         estimates = {}
         for service_id in {t.service_id for t in tickets if t.status == "waiting"}:
             estimates.update(self.estimates(service_id))
@@ -336,14 +333,56 @@ class QueueService:
                 }
                 for t in tickets
             ],
-            "counters": [
-                {
-                    "id": c.id,
-                    "name": c.name,
-                    "service_id": c.service_id,
-                    "active": c.active,
-                    "staffed": c.staff_id in available_staff,
-                }
-                for c in counters
-            ],
+            "counters": counters,
         }
+
+    def counter_summaries(self, tickets=None):
+        """Public-safe counter state. Waiting counts belong to a shared service queue."""
+        if tickets is None:
+            tickets = self.db.scalars(
+                select(Ticket).where(Ticket.org_id == self.org_id, Ticket.status.in_(("waiting", "serving")))
+            ).all()
+        counters = self.db.scalars(
+            select(Counter).where(Counter.org_id == self.org_id).order_by(Counter.name, Counter.id)
+        ).all()
+        services = {s.id: s for s in self.db.scalars(select(Service).where(Service.org_id == self.org_id))}
+        available_staff = set(
+            self.db.scalars(select(User.id).where(User.org_id == self.org_id, User.active.is_(True)))
+        )
+        waiting = {}
+        serving = {}
+        for ticket in tickets:
+            if ticket.status == "waiting":
+                waiting[ticket.service_id] = waiting.get(ticket.service_id, 0) + 1
+            elif ticket.status == "serving":
+                serving[ticket.counter_id] = ticket.token
+        result = []
+        for counter in counters:
+            service = services[counter.service_id]
+            staffed = counter.staff_id in available_staff
+            availability = (
+                "paused"
+                if not counter.active
+                else "unstaffed"
+                if not staffed
+                else "service_unavailable"
+                if not service.active
+                else "serving"
+                if counter.id in serving
+                else "available"
+            )
+            result.append(
+                {
+                    "id": counter.id,
+                    "name": counter.name,
+                    "service_id": counter.service_id,
+                    "service_name": service.name,
+                    "service_active": service.active,
+                    "active": counter.active,
+                    "staffed": staffed,
+                    "availability": availability,
+                    "serving_token": serving.get(counter.id),
+                    "waiting_count": waiting.get(counter.service_id, 0),
+                }
+            )
+        return result

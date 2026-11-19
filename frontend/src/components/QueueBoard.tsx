@@ -1,4 +1,5 @@
 import type { Board, Service } from "../api";
+import CounterOverview from "./CounterOverview";
 export default function QueueBoard({
   board,
   services,
@@ -8,34 +9,10 @@ export default function QueueBoard({
 }) {
   return (
     <>
-      <section className="panel">
-        <div className="section-title">
-          <h2>Now serving</h2>
-          <span className="eyebrow">WATCH FOR YOUR TOKEN</span>
-        </div>
-        <div className="counter-grid">
-          {board?.counters.map((c) => {
-            const t = board.tickets.find(
-              (t) => t.counter_id === c.id && t.status === "serving",
-            );
-            return (
-              <article className="counter-card" key={c.id}>
-                <span
-                  className={`badge ${c.active && c.staffed ? "waiting" : "cancelled"}`}
-                >
-                  {c.active && c.staffed ? "Open" : "Unavailable"}
-                </span>
-                <h3>{c.name}</h3>
-                <strong className="counter-token">{t?.token ?? "—"}</strong>
-                <p>{services.find((s) => s.id === c.service_id)?.name}</p>
-              </article>
-            );
-          })}
-        </div>
-        {!board?.counters.length && (
-          <p className="empty">No counters configured yet.</p>
-        )}
-      </section>
+      <CounterOverview
+        counters={board?.counters ?? []}
+        title="Now serving by counter"
+      />
       <section className="panel">
         <h2>Up next</h2>
         <div className="table-wrap">
@@ -44,6 +21,7 @@ export default function QueueBoard({
               <tr>
                 <th>Token</th>
                 <th>Service</th>
+                <th>Counter routing</th>
                 <th>Position</th>
                 <th>Estimated wait</th>
               </tr>
@@ -58,6 +36,17 @@ export default function QueueBoard({
                       <strong>{t.token}</strong>
                     </td>
                     <td>{services.find((s) => s.id === t.service_id)?.name}</td>
+                    <td>
+                      {board.counters
+                        .filter(
+                          (c) =>
+                            c.service_id === t.service_id &&
+                            ["available", "serving"].includes(c.availability),
+                        )
+                        .map((c) => c.name)
+                        .join(" / ") || "Awaiting an available counter"}
+                      <small>Assigned when called</small>
+                    </td>
                     <td>{t.position}</td>
                     <td>
                       {t.eta_minutes === null

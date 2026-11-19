@@ -270,6 +270,7 @@ def operations(db: Db, user: Annotated[User, Depends(current_user)]):
     return {
         "tickets": [service.private_ticket(t, estimates) for t in tickets],
         "counters": db.scalars(select(Counter).where(Counter.org_id == user.org_id)).all(),
+        "counter_summaries": service.counter_summaries(),
         "services": db.scalars(select(Service).where(Service.org_id == user.org_id)).all(),
         "staff": [
             {"id": u.id, "name": u.name, "email": u.email, "role": u.role, "active": u.active}

@@ -5,18 +5,21 @@ import {
   Check,
   Ticket as TicketIcon,
 } from "lucide-react";
-import { api, type Service } from "../api";
+import { api, type Service, type CounterSummary } from "../api";
+import { counterStatus } from "./CounterOverview";
 import { today, formatTime } from "../utils";
 export default function RegistrationForm({
   services,
   reception,
   busy,
   onSubmit,
+  counters = [],
 }: {
   services: Service[];
   reception: boolean;
   busy: boolean;
   onSubmit: (data: unknown) => Promise<void>;
+  counters?: CounterSummary[];
 }) {
   const [mode, setMode] = useState("appointment"),
     [service, setService] = useState(""),
@@ -93,6 +96,16 @@ export default function RegistrationForm({
           ))}
         </select>
       </label>
+      <div className="service-counter-hint" aria-live="polite">
+        <strong>Counters for this service</strong>
+        <p>
+          {counters
+            .filter((c) => c.service_id === chosen)
+            .map((c) => `${c.name} (${counterStatus[c.availability]})`)
+            .join(" · ") || "No counters currently listed for this service."}
+        </p>
+        <small>One shared queue; your counter is assigned when called.</small>
+      </div>
       {mode === "appointment" && (
         <>
           <label>

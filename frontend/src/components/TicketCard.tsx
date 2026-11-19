@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Ticket as TicketIcon } from "lucide-react";
-import { api, type Ticket, type Service, type Counter } from "../api";
+import { api, type Ticket, type Service, type CounterSummary } from "../api";
+import { counterStatus } from "./CounterOverview";
 import { today, formatTime, status } from "../utils";
 export default function TicketCard({
   ticket,
@@ -12,7 +13,7 @@ export default function TicketCard({
 }: {
   ticket: Ticket;
   services: Service[];
-  counters: Counter[];
+  counters: CounterSummary[];
   busy: boolean;
   act: (fn: () => Promise<unknown>, message?: string) => Promise<void>;
   save: (t: Ticket) => void;
@@ -63,6 +64,47 @@ export default function TicketCard({
       <h3>{services.find((s) => s.id === ticket.service_id)?.name}</h3>
       <p>{ticket.name}</p>
       {ticket.slot && <p>{new Date(ticket.slot).toLocaleString()}</p>}
+      <div className="ticket-counter-info">
+        <strong>
+          {ticket.counter_id ? "Assigned counter" : "Counter assignment"}
+        </strong>
+        {ticket.counter_id ? (
+          <p>
+            {counters.find((c) => c.id === ticket.counter_id)?.name ??
+              "Counter details unavailable"}
+          </p>
+        ) : ["booked", "waiting"].includes(ticket.status) ? (
+          <>
+            <p>
+              {ticket.status === "booked"
+                ? "Check in near your appointment time. Your counter will be assigned when called."
+                : "You are in the shared service queue. Your counter will be assigned when called."}
+            </p>
+            <ul>
+              {counters
+                .filter((c) => c.service_id === ticket.service_id)
+                .map((c) => (
+                  <li key={c.id}>
+                    <span>{c.name}</span>
+                    <small>{counterStatus[c.availability]}</small>
+                  </li>
+                ))}
+            </ul>
+            {!counters.some(
+              (c) =>
+                c.service_id === ticket.service_id &&
+                ["available", "serving"].includes(c.availability),
+            ) && (
+              <p>
+                No staffed, open counter is currently available for this
+                service.
+              </p>
+            )}
+          </>
+        ) : (
+          <p>No counter was assigned.</p>
+        )}
+      </div>
       <div className="pass-metrics">
         <div>
           <small>QUEUE POSITION</small>

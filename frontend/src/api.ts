@@ -73,7 +73,15 @@ export type Counter = {
 export type Board = {
   organization: string;
   tickets: Omit<Ticket, "secret" | "name" | "id" | "priority" | "slot">[];
-  counters: Counter[];
+  counters: CounterSummary[];
+};
+export type CounterSummary = Counter & {
+  service_name: string;
+  service_active: boolean;
+  availability:
+    "available" | "serving" | "paused" | "unstaffed" | "service_unavailable";
+  serving_token: string | null;
+  waiting_count: number;
 };
 export type User = {
   id: string;

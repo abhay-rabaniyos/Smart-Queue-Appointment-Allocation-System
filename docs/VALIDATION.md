@@ -4,6 +4,8 @@ Validation date: 17 November 2026.
 
 Update, 18 November 2026: opt-in demo accounts added; all 52 backend tests passed with 94% coverage, including login for all three demo roles, repeatable setup, conflict rollback, and empty-organization bootstrap.
 
+Update, 19 November 2026: counter-specific customer and staff views added. Backend: 55 tests passed, 94% coverage. Frontend: 14 tests passed and production build passed. Checks cover shared queue counts, distinct serving tokens, availability reasons, public privacy, role-specific controls, counter filters, and customer assignment messaging. New screens have component-test validation; no new manual browser pass is claimed.
+
 - Backend: 49 tests passed with 94% statement coverage, including workflow, concurrency, SMTP/Twilio/webhook adapters, configuration, and frozen migration upgrade/downgrade checks.
 - Frontend: 8 tests passed; TypeScript validation and Vite production build passed, including stable idempotency keys after network failures.
 - Dependency audit: zero frontend vulnerabilities after updating Vitest to 4.1.12.

@@ -16,12 +16,14 @@ import { api, type Service, type Ticket, type User } from "./api";
 import type { Operations } from "./types";
 import { status } from "./utils";
 import useBoard from "./hooks/useBoard";
+import CounterOverview from "./components/CounterOverview";
 import Stat from "./components/Stat";
 import RegistrationForm from "./components/RegistrationForm";
 import TicketCard from "./components/TicketCard";
 import QueueBoard from "./components/QueueBoard";
 import AdminTools from "./components/AdminTools";
 export default function App() {
+  const [counterFilter, setCounterFilter] = useState("all");
   const [view, setView] = useState("visit"),
     [services, setServices] = useState<Service[]>([]),
     [user, setUser] = useState<User | null>(null),
@@ -87,6 +89,17 @@ export default function App() {
     sessionStorage.setItem("qp-ticket", value.secret);
     history.replaceState(null, "", `#ticket=${value.secret}`);
   };
+  const visibleTickets = ops
+    ? ops.tickets.filter(
+        (t) =>
+          counterFilter === "all" ||
+          t.counter_id === counterFilter ||
+          (!t.counter_id &&
+            ["booked", "waiting"].includes(t.status) &&
+            ops.counters.find((c) => c.id === counterFilter)?.service_id ===
+              t.service_id),
+      )
+    : [];
   const total =
     board?.tickets.filter((t) => t.status === "waiting").length ?? 0;
   return (
@@ -226,6 +239,12 @@ export default function App() {
             />
           </section>
           {view === "visit" && (
+            <CounterOverview
+              counters={board?.counters ?? []}
+              title="Counters at this branch"
+            />
+          )}
+          {view === "visit" && (
             <div className="visit-grid">
               <section className="panel">
                 <div className="panel-heading">
@@ -236,6 +255,11 @@ export default function App() {
                   </div>
                 </div>
                 <RegistrationForm
+                  counters={
+                    user && ops
+                      ? ops.counter_summaries
+                      : (board?.counters ?? [])
+                  }
                   services={services}
                   reception={false}
                   busy={busy}
@@ -395,6 +419,11 @@ export default function App() {
                       <section className="panel">
                         <h2>Reception registration</h2>
                         <RegistrationForm
+                          counters={
+                            user && ops
+                              ? ops.counter_summaries
+                              : (board?.counters ?? [])
+                          }
                           services={services}
                           reception
                           busy={busy}
@@ -425,97 +454,100 @@ export default function App() {
                         )}
                       </section>
                     )}
-                    <section className="panel">
-                      <div className="section-title">
-                        <h2>Counter workspace</h2>
-                        {user.role === "admin" && (
+                    <CounterOverview
+                      counters={ops.counter_summaries}
+                      staff={ops.staff}
+                      assignments={ops.counters}
+                      user={user}
+                      title="Counter workspace"
+                      renderActions={(c) => {
+                        const assignment = ops.counters.find(
+                          (a) => a.id === c.id,
+                        );
+                        const canOperate =
+                          user.role === "admin" ||
+                          (user.role === "staff" &&
+                            assignment?.staff_id === user.id);
+                        const serving = c.serving_token !== null;
+                        return canOperate ? (
                           <button
-                            className="secondary"
-                            disabled={busy}
+                            className="primary"
+                            disabled={
+                              busy ||
+                              (!serving && c.availability !== "available")
+                            }
                             onClick={() =>
                               void act(
-                                () => api("/admin/dispatch", "POST"),
-                                "Available counters allocated",
+                                () =>
+                                  api(
+                                    `/counters/${c.id}/${serving ? "complete" : "call"}`,
+                                    "POST",
+                                  ),
+                                serving ? "Visit completed" : "Customer called",
                               )
                             }
                           >
-                            Allocate available counters
+                            {serving ? "Complete visit" : "Call next"}
+                            <ArrowRight size={16} />
                           </button>
-                        )}
-                        <span className="muted">
-                          Call next uses priority + waiting time
-                        </span>
-                      </div>
-                      <div className="counter-grid">
-                        {ops.counters
-                          .filter(
-                            (c) =>
-                              user.role === "admin" || c.staff_id === user.id,
+                        ) : (
+                          <p className="muted">
+                            {user.role === "receptionist"
+                              ? "Reception view · staff operates this counter"
+                              : "Operated by its assigned staff"}
+                          </p>
+                        );
+                      }}
+                    />
+                    {user.role === "admin" && (
+                      <button
+                        className="secondary"
+                        disabled={busy}
+                        onClick={() =>
+                          void act(
+                            () => api("/admin/dispatch", "POST"),
+                            "Available counters allocated",
                           )
-                          .map((c) => {
-                            const serving = ops.tickets.find(
-                              (t) =>
-                                t.counter_id === c.id && t.status === "serving",
-                            );
-                            return (
-                              <article className="counter-card" key={c.id}>
-                                <div className="section-title">
-                                  <h3>{c.name}</h3>
-                                  <span
-                                    className={`badge ${c.active ? "waiting" : "cancelled"}`}
-                                  >
-                                    {c.active ? "Open" : "Paused"}
-                                  </span>
-                                </div>
-                                <p>
-                                  {
-                                    services.find((s) => s.id === c.service_id)
-                                      ?.name
-                                  }
-                                </p>
-                                <strong className="counter-token">
-                                  {serving?.token ?? "Ready for next"}
-                                </strong>
-                                {serving && <p>{serving.name}</p>}
-                                <button
-                                  className="primary"
-                                  disabled={busy || !c.active || !c.staff_id}
-                                  onClick={() =>
-                                    void act(
-                                      () =>
-                                        api(
-                                          `/counters/${c.id}/${serving ? "complete" : "call"}`,
-                                          "POST",
-                                        ),
-                                      serving
-                                        ? "Visit completed"
-                                        : "Customer called",
-                                    )
-                                  }
-                                >
-                                  {serving ? "Complete visit" : "Call next"}
-                                  <ArrowRight size={16} />
-                                </button>
-                              </article>
-                            );
-                          })}
-                      </div>
-                    </section>
+                        }
+                      >
+                        Allocate available counters
+                      </button>
+                    )}
                     <section className="panel">
                       <h2>Appointments & visitors</h2>
+                      <label>
+                        Filter visitors by counter
+                        <select
+                          value={counterFilter}
+                          onChange={(e) => setCounterFilter(e.target.value)}
+                        >
+                          <option value="all">All counters</option>
+                          {ops.counters.map((c) => (
+                            <option key={c.id} value={c.id}>
+                              {c.name}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <p className="muted">
+                        Unassigned bookings and waiting visitors are shown for
+                        each counter handling their service. They are not
+                        reserved for that counter.
+                      </p>
                       <div className="table-wrap">
-                        <table>
+                        <table aria-label="Appointments and visitors">
                           <thead>
                             <tr>
                               <th>Token / Visitor</th>
                               <th>Appointment</th>
+                              <th>Counter / routing</th>
                               <th>Status</th>
                               <th>Priority</th>
                               <th>Actions</th>
                             </tr>
                           </thead>
                           <tbody>
-                            {ops.tickets.map((t) => (
+                            {visibleTickets.map((t) => (
                               <tr key={t.id}>
                                 <td>
                                   <strong>{t.token}</strong>
@@ -525,6 +557,31 @@ export default function App() {
                                   {t.slot
                                     ? new Date(t.slot).toLocaleString()
                                     : "Walk-in"}
+                                </td>
+                                <td>
+                                  {t.counter_id ? (
+                                    (ops.counters.find(
+                                      (c) => c.id === t.counter_id,
+                                    )?.name ?? "Counter unavailable")
+                                  ) : ["booked", "waiting"].includes(
+                                      t.status,
+                                    ) ? (
+                                    <>
+                                      Unassigned
+                                      <small>
+                                        {ops.counters
+                                          .filter(
+                                            (c) =>
+                                              c.service_id === t.service_id,
+                                          )
+                                          .map((c) => c.name)
+                                          .join(" / ") ||
+                                          "No counters configured"}
+                                      </small>
+                                    </>
+                                  ) : (
+                                    "Not assigned"
+                                  )}
                                 </td>
                                 <td>
                                   <span className={`badge ${t.status}`}>
@@ -555,8 +612,12 @@ export default function App() {
                             ))}
                           </tbody>
                         </table>
-                        {!ops.tickets.length && (
-                          <p className="empty">No visitors registered yet.</p>
+                        {!visibleTickets.length && (
+                          <p className="empty">
+                            {ops.tickets.length
+                              ? "No visitors match this counter."
+                              : "No visitors registered yet."}
+                          </p>
                         )}
                       </div>
                     </section>

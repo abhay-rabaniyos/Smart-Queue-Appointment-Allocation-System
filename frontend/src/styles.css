@@ -1,4 +1,65 @@
 @import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap");
+.counter-details {
+  font-size: 12px;
+  margin: 18px 0;
+}
+.counter-details > div {
+  margin: 13px 0;
+}
+.counter-details dt {
+  font-size: 10px;
+  color: #75826f;
+  margin-bottom: 5px;
+}
+.counter-details dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.counter-serving-token {
+  font-size: 24px;
+  font-weight: 700;
+  color: #215d3f;
+}
+.my-counter {
+  border: 2px solid #56815e;
+}
+.counter-overview .section-title label {
+  margin: 0;
+  min-width: 160px;
+}
+.service-counter-hint,
+.ticket-counter-info {
+  text-align: left;
+  padding: 14px;
+  border: 1px solid #dce6d5;
+  border-radius: 8px;
+  background: #f6f9f2;
+  margin-bottom: 18px;
+  font-size: 11px;
+}
+.service-counter-hint p,
+.ticket-counter-info p {
+  line-height: 1.7;
+  margin: 8px 0;
+}
+.service-counter-hint small {
+  color: #73836c;
+}
+.ticket-counter-info ul {
+  list-style: none;
+  margin: 10px 0;
+  padding: 0;
+}
+.ticket-counter-info li {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid #e1e9da;
+}
+.ticket-counter-info li small {
+  color: #667c5d;
+}
 :root {
   font-family: "DM Sans", sans-serif;
   color: #23372f;
